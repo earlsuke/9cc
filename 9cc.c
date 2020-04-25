@@ -28,6 +28,24 @@ struct Token {
 // 現在のtoken
 Token* token;
 
+// user 入力
+char* user_input;
+
+// エラー箇所報告付きのエラー関数
+
+void error_at(char* loc, char* fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+
+  int pos = loc - user_input;
+  fprintf(stderr, "%s\n", user_input);
+  fprintf(stderr, "%*s", pos, ""); // pos個の*を出力
+  fprintf(stderr, "^");
+  vfprintf(stderr, fmt, ap);
+  fprintf(stderr, "\n");
+  exit(1);
+}
+
 // エラー処理のための関数
 void error(char* fmt, ...) {
   va_list ap;
@@ -54,7 +72,7 @@ bool consume(char op) {
 // opを期待して現在のトークンを確認，異なる場合は，エラー処理する．
 void expect(char op) {
   if (token->kind != TK_RESERVED || token->str[0] != op) {
-    error("'%cではありません", op);
+    error_at(token->str, "'%cではありません", op);
   }
   // 期待したtokenの場合は，次にすすめる
   token  = token->next;
@@ -62,7 +80,7 @@ void expect(char op) {
 
 int expect_number() {
   if (token->kind != TK_NUM) {
-    error("数ではありません．");
+    error_at(token->str, "数ではありません．");
   }
 
   int val = token->val;
@@ -83,7 +101,10 @@ Token* new_token(TokenKind kind, Token* cur, char* str) {
 }
 
 // スペースをスキップして，token系列が作られる(Linked list)
-Token* tokenize(char* p) {
+// Token* tokenize(char* p) {
+  Token* tokenize() {
+  char* p = user_input;
+  
   // dummy head
   Token head;
   head.next = NULL;
@@ -108,7 +129,7 @@ Token* tokenize(char* p) {
       continue;
     }
 
-    error("トークナイズできません");
+    error_at(p, "トークナイズできません");
   }
 
   new_token(TK_EOF, cur, p);
@@ -122,10 +143,12 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  char *p = argv[1];
+  // char* p = argv[1];
+  // user_input = p;
+  user_input = argv[1];
 
   // トークナイズ
-  token = tokenize(p);
+  token = tokenize();
 
   printf(".intel_syntax noprefix\n");
   printf(".global main\n");
